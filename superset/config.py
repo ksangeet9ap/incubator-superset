@@ -221,7 +221,7 @@ DEFAULT_MODULE_DS_MAP = OrderedDict([
     ('superset.connectors.sqla.models', ['SqlaTable']),
     ('superset.connectors.druid.models', ['DruidDatasource']),
 ])
-ADDITIONAL_MODULE_DS_MAP = {}
+ADDITIONAL_MODULE_DS_MAP = {'superset.connectors.cosmos.models': ['CosmosDatasource']}
 ADDITIONAL_MIDDLEWARE = []
 
 """
