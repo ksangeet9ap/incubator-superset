@@ -13,7 +13,7 @@ const propTypes = {
   description: PropTypes.string,
   disabled: PropTypes.bool,
   freeForm: PropTypes.bool,
-  isLoading: PropTypes.bool,
+  isLoading: PropTypes.bool,          
   label: PropTypes.string,
   multi: PropTypes.bool,
   name: PropTypes.string.isRequired,

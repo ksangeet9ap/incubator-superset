@@ -213,7 +213,7 @@ export default class AdhocMetricEditPopover extends React.Component {
           </Tab>
           {
             this.props.datasourceType !== 'druid' &&
-            <Tab className="adhoc-metric-edit-tab" eventKey={EXPRESSION_TYPES.SQL} title="Custom SQL">
+            <Tab className="adhoc-metric-edit-tab" eventKey={EXPRESSION_TYPES.SQL} title={this.props.datasourceType === 'cosmos' ? 'Custom Mongo Query': 'Custom SQL'}>
               <FormGroup>
                 <AceEditor
                   mode="sql"

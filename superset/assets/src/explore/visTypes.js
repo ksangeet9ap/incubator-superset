@@ -1720,11 +1720,29 @@ export default visTypes;
 
 export function sectionsToRender(vizType, datasourceType) {
   const viz = visTypes[vizType];
-  return [].concat(
-    sections.datasourceAndVizType,
-    datasourceType === 'table' ? sections.sqlaTimeSeries : sections.druidTimeSeries,
-    viz.controlPanelSections,
-    datasourceType === 'table' ? sections.sqlClause : [],
-    datasourceType === 'table' ? sections.filters[0] : sections.filters,
-  );
+  let timePanel = sections.druidTimeSeries;
+  switch(datasourceType){
+    case 'table' : 
+      return [].concat(
+        sections.datasourceAndVizType,
+        sections.sqlaTimeSeries,
+        viz.controlPanelSections,
+        sections.sqlClause,
+        sections.filters[0],
+      );
+    case 'cosmos' :
+      return [].concat(
+        sections.datasourceAndVizType,
+        sections.sqlaTimeSeries,
+        viz.controlPanelSections,
+        sections.filters[0],
+      );
+    default:
+      return [].concat(
+        sections.datasourceAndVizType,
+        sections.druidTimeSeries,
+        viz.controlPanelSections,
+        sections.filters,
+      );
+  }
 }
