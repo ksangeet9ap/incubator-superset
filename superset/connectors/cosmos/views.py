@@ -36,12 +36,12 @@ class CosmosColumnInlineView(CompactCRUDMixin, SupersetModelView):
 
     edit_columns = [
         'column_name', 'description', 'json', 'datasource',
-        'groupby', 'filterable', 'count_distinct', 'sum', 'min', 'max',
+        'groupby', 'filterable', 'count_distinct', 'sum', 'min', 'max', 'is_dttm'
     ]
     add_columns = edit_columns
     list_columns = [
         'column_name', 'verbose_name', 'type', 'groupby',
-        'filterable', 'count_distinct', 'sum', 'min', 'max',
+        'filterable', 'count_distinct', 'sum', 'min', 'max', 'is_dttm'
     ]
     can_delete = False
     page_size = 500
@@ -54,9 +54,14 @@ class CosmosColumnInlineView(CompactCRUDMixin, SupersetModelView):
         'count_distinct': _('Distinct'),
         'sum': _('Sum'),
         'min': _('Min'),
-        'max': _('Max')
+        'max': _('Max'),
+        'is_dttm': _('Is temporal')
     }
     description_columns = {
+        'is_dttm': _(
+            'Whether to make this column available as a '
+            '[Time Granularity] option, column has to be DATETIME or '
+            'DATETIME-like'),
         'filterable': _(
             'Whether this column is exposed in the `Filters` section '
             'of the explore view.'),

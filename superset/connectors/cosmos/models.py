@@ -131,6 +131,7 @@ class CosmosCluster(Model, AuditMixinNullable, ImportMixin):
         # Bug - Safely assuming all the records follow the same schema
         # Assuming no nested json is present
         ds_refresh = list(ds_map.values())
+        dttm_cols = []
         for i in range(len(ds_refresh)):
             datasource = ds_refresh[i]
             # Currently checking data types by extracting one row and checking the types of each col
@@ -165,6 +166,13 @@ class CosmosCluster(Model, AuditMixinNullable, ImportMixin):
                     col_obj.min = True
                     col_obj.max = True
                     col_obj.avg = True
+                # Have to think into the date part to implement granualarity and time series charts
+                if col_obj.is_time:
+                    if not datasource.main_dttm_col:
+                        datasource.main_dttm_col = col_obj.column_name
+                    col_obj.is_dttm = True
+                #     dttm_cols.append(col_obj.column_name)
+            # datasource.dttm_cols = dttm_cols
             datasource.refresh_metrics()
         session.commit()
 
@@ -195,12 +203,13 @@ class CosmosColumn(Model, BaseColumn):
         backref=backref('columns', cascade='all, delete-orphan'),
         enable_typechecks=False
     )
+    is_dttm = Column(Boolean, default=False)
     json = Column(Text)
 
     export_fields = (
         'datasource_name', 'column_name', 'is_active', 'type', 'groupby',
         'sum', 'avg', 'max', 'min', 'filterable',
-        'description'
+        'description', 'is_dttm'
     )
 
     @property
@@ -351,6 +360,7 @@ class CosmosDatasource(Model, BaseDatasource):
     baselink = 'cosmosdatasourcemodelview'
 
     datasource_name = Column(String(255))
+    main_dttm_col = Column(String(250))
     is_hidden = Column(Boolean, default=False)
     filter_select_enabled = Column(Boolean, default=True)
     fetch_values_from = Column(String(100))
@@ -381,6 +391,32 @@ class CosmosDatasource(Model, BaseDatasource):
     @property
     def connection(self):
         return str(self.database)
+
+    # @property
+    # def main_dttm_col(self):
+    #     return None
+    #
+    # @main_dttm_col.setter
+    # def main_dttm_col(self, date):
+    #     self.main_dttm_col = date
+
+    @property
+    def dttm_cols(self):
+        l = [c.column_name for c in self.columns if c.type is 'DATETIME']
+        if self.main_dttm_col and self.main_dttm_col not in l:
+            l.append(self.main_dttm_col)
+        return l
+
+    @property
+    def any_dttm_col(self):
+        cols = self.dttm_cols
+        if cols:
+            return cols[0]
+
+    #
+    # @dttm_cols.setter
+    # def dttm_cols(self, date_list):
+    #     self.dttm_cols = date_list
 
     @property
     def num_cols(self):
@@ -422,12 +458,13 @@ class CosmosDatasource(Model, BaseDatasource):
     @property
     def time_column_grains(self):
         return {
-            'time_columns': [
-                'all', '5 seconds', '30 seconds', '1 minute',
-                '5 minutes', '1 hour', '6 hour', '1 day', '7 days',
-                'week', 'week_starting_sunday', 'week_ending_saturday',
-                'month',
-            ],
+            # 'time_columns': [
+            #     'all', '5 seconds', '30 seconds', '1 minute',
+            #     '5 minutes', '1 hour', '6 hour', '1 day', '7 days',
+            #     'week', 'week_starting_sunday', 'week_ending_saturday',
+            #     'month',
+            # ],
+            'time_columns': self.dttm_cols,
             'time_grains': ['now'],
         }
 
@@ -470,6 +507,17 @@ class CosmosDatasource(Model, BaseDatasource):
     def refresh_metrics(self):
         for col in self.columns:
             col.refresh_metrics()
+
+    @property
+    def data(self):
+        d = super(CosmosDatasource, self).data
+        if self.type == 'cosmos':
+            # grains = self.database.grains() or []
+            # if grains:
+            #     grains = [(g.duration, g.name) for g in grains]
+            d['granularity_sqla'] = utils.choicify(self.dttm_cols)
+            d['time_grain_sqla'] = ['week']
+        return d
 
     def values_for_column(self, column_name, limit=10000):
         """Retrieve some values for the given column"""
@@ -530,6 +578,9 @@ class CosmosDatasource(Model, BaseDatasource):
         if not groupby and not metrics and not columns:
             raise Exception(_('Empty query?'))
 
+        if granularity not in self.dttm_cols:
+            granularity = self.main_dttm_col
+
         pipeline = []
         metrics_dict = {m.metric_name: m for m in self.metrics}
         columns_dict = {c.column_name: c for c in self.columns}
@@ -541,7 +592,9 @@ class CosmosDatasource(Model, BaseDatasource):
                 metrics_exprs['$group']['_id'][s] = '${}'.format(s)
 
         if granularity:
-            pass
+            dttm_col = columns_dict[granularity]
+            time_grain = extras.get('time_grain_sqla')
+
 
         if filter:
             pass
