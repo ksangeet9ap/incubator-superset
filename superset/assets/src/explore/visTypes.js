@@ -1735,7 +1735,7 @@ export function sectionsToRender(vizType, datasourceType) {
         sections.datasourceAndVizType,
         sections.sqlaTimeSeries,
         viz.controlPanelSections,
-        sections.filters[0],
+        sections.filters,
       );
     default:
       return [].concat(

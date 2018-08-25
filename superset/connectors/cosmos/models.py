@@ -38,6 +38,7 @@ from superset.utils import (
 from pymongo import MongoClient
 import datetime
 import pandas as pd
+import pprint
 
 class CosmosCluster(Model, AuditMixinNullable, ImportMixin):
     __tablename__ = 'cosmos_clusters'
@@ -567,8 +568,8 @@ class CosmosDatasource(Model, BaseDatasource):
         orderby = orderby or []
         projection_columns = []
 
-        if is_timeseries:
-            raise Exception(_('Timeseries slices not supported.'))
+        # if is_timeseries:
+        #     raise Exception(_('Timeseries slices not supported.'))
 
         if not granularity and is_timeseries:
             raise Exception(_(
@@ -590,11 +591,17 @@ class CosmosDatasource(Model, BaseDatasource):
         if groupby:
             for s in groupby:
                 metrics_exprs['$group']['_id'][s] = '${}'.format(s)
+            if is_timeseries:
+                metrics_exprs['$group']['_id'][DTTM_ALIAS] = '${}'.format(granularity)
 
         if granularity:
-            dttm_col = columns_dict[granularity]
+            # dttm_col = columns_dict[granularity]
             time_grain = extras.get('time_grain_sqla')
 
+            if time_grain:
+                raise Exception('Time grain not yet supported')
+
+            pipeline.append({"$match": {granularity: {"$gte": from_dttm, "$lte": to_dttm}}})
 
         if filter:
             pass
@@ -603,6 +610,8 @@ class CosmosDatasource(Model, BaseDatasource):
         main_metric_expr = None
         if not metrics_exprs['$group']['_id']:
             metrics_exprs = {'$group': {'_id': ''}}
+            if is_timeseries:
+                metrics_exprs = {'$group': {'_id': {DTTM_ALIAS: '${}'.format(granularity)}}}
 
         # Count logic is done. Need to work on count_distinct
         for m in metrics:
@@ -719,6 +728,6 @@ class CosmosDatasource(Model, BaseDatasource):
 
         return QueryResult(
             df=df,
-            query=str(pipeline),
+            query=str(pprint.pformat(pipeline, width=20, indent=2)),
             duration=datetime.datetime.now() - qry_start_dttm
         )
